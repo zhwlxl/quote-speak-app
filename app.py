@@ -8,6 +8,7 @@ from voice_providers import get_voice_provider
 from video_generator import VideoGenerator
 from utils import validate_input, cleanup_old_files
 from monitoring import time_request, UsageTracker
+from storage_manager import StorageManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +27,16 @@ def create_app(config_name='default'):
     
     # Initialize video generator
     video_gen = VideoGenerator(app.config)
+    
+    # Initialize storage manager
+    storage_manager = StorageManager(
+        output_folder=app.config['UPLOAD_FOLDER'],
+        max_age_hours=24,
+        max_storage_gb=5.0
+    )
+    
+    # Start scheduled cleanup (every 6 hours)
+    storage_manager.start_scheduled_cleanup(interval_hours=6)
     
     @app.route('/')
     def index():
@@ -48,6 +59,18 @@ def create_app(config_name='default'):
     @app.route('/api/stats')
     def get_stats():
         return jsonify(usage_tracker.get_stats())
+    
+    @app.route('/api/storage')
+    def get_storage_stats():
+        return jsonify(storage_manager.get_storage_stats())
+    
+    @app.route('/api/cleanup', methods=['POST'])
+    def manual_cleanup():
+        try:
+            result = storage_manager.smart_cleanup()
+            return jsonify({'success': True, 'result': result})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
     
     @app.route('/generate', methods=['POST'])
     @time_request
