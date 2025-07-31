@@ -1,7 +1,7 @@
 services:
   - type: web
     name: quote-speak-app
-    env: python
+    runtime: python3
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 app:app
     envVars:
@@ -10,7 +10,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: OPENAI_API_KEY
-        sync: false  # You'll set this manually
+        sync: false
       - key: MAX_TEXT_LENGTH
         value: 2000
       - key: MAX_TITLE_LENGTH
