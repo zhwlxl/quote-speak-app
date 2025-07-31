@@ -1,13 +1,52 @@
 <!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text to Video Generator</title>
+    <title>Quote to Speak</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        :root {
+            --primary-start: 138, 43, 226;
+            --primary-end: 100, 83, 246;
+            --text-color: 255, 255, 255;
+        }
+
+        body {
+            background: linear-gradient(135deg, 
+                rgb(var(--primary-start)) 0%, 
+                rgb(var(--primary-end)) 100%);
+            min-height: 100vh;
+            transition: background 0.5s ease;
+        }
+
+        .theme-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .theme-button {
+            background: linear-gradient(135deg, 
+                rgb(var(--primary-start)) 0%, 
+                rgb(var(--primary-end)) 100%);
+            color: rgb(var(--text-color));
+            transition: all 0.3s ease;
+        }
+
+        .theme-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(var(--primary-start), 0.3);
+        }
+
+        .theme-input:focus {
+            border-color: rgb(var(--primary-start));
+            box-shadow: 0 0 0 3px rgba(var(--primary-start), 0.1);
+        }
+
         .progress-bar {
             width: 100%;
             height: 20px;
-            background-color: #f0f0f0;
+            background-color: rgba(255, 255, 255, 0.3);
             border-radius: 10px;
             overflow: hidden;
             display: none;
@@ -16,7 +55,9 @@
         .progress {
             width: 0%;
             height: 100%;
-            background-color: #4f46e5;
+            background: linear-gradient(90deg, 
+                rgb(var(--primary-start)) 0%, 
+                rgb(var(--primary-end)) 100%);
             transition: width 0.3s ease;
         }
 
@@ -24,17 +65,8 @@
             display: none;
             margin-top: 10px;
             text-align: center;
-            color: #4f46e5;
-        }
-
-        .provider-unavailable {
-            color: #9ca3af;
-            font-style: italic;
-        }
-
-        .provider-status {
-            font-size: 0.75rem;
-            margin-left: 0.5rem;
+            color: rgb(var(--text-color));
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .provider-available {
@@ -44,29 +76,67 @@
         .provider-unavailable-status {
             color: #ef4444;
         }
+
+        .theme-title {
+            color: rgb(var(--text-color));
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: color 0.3s ease;
+        }
+
+        /* Color theme definitions */
+        .theme-purple_blue {
+            --primary-start: 138, 43, 226;
+            --primary-end: 100, 83, 246;
+            --text-color: 255, 255, 255;
+        }
+
+        .theme-sunset {
+            --primary-start: 255, 128, 8;
+            --primary-end: 255, 200, 55;
+            --text-color: 255, 255, 255;
+        }
+
+        .theme-ocean {
+            --primary-start: 0, 119, 182;
+            --primary-end: 3, 169, 244;
+            --text-color: 255, 255, 255;
+        }
+
+        .theme-forest {
+            --primary-start: 34, 139, 34;
+            --primary-end: 154, 205, 50;
+            --text-color: 255, 255, 255;
+        }
+
+        .theme-dark {
+            --primary-start: 28, 28, 28;
+            --primary-end: 64, 64, 64;
+            --text-color: 255, 255, 255;
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="theme-purple_blue min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-3xl">
-        <h1 class="text-3xl font-bold text-center mb-8 text-indigo-600">Text to Video Generator</h1>
+        <h1 class="text-4xl font-bold text-center mb-8 theme-title">Quote to Speak</h1>
+        <p class="text-center mb-8 theme-title opacity-90">Transform your quotes into beautiful videos with AI-powered voice</p>
         
-        <form id="generatorForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
+        <form id="generatorForm" class="space-y-6 theme-card p-8 rounded-xl shadow-2xl">
             <!-- Title Input -->
             <div>
-                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title:</label>
-                <input type="text" id="title" name="title" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-2">✨ Quote Title:</label>
+                <input type="text" id="title" name="title" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200" placeholder="Enter your quote title...">
             </div>
 
             <!-- Text Content -->
             <div>
-                <label for="text" class="block text-sm font-medium text-gray-700 mb-1">Text Content:</label>
-                <textarea id="text" name="text" rows="6" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <label for="text" class="block text-sm font-medium text-gray-700 mb-2">📝 Quote Content:</label>
+                <textarea id="text" name="text" rows="6" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200" placeholder="Enter your inspirational quote or message..."></textarea>
             </div>
 
             <!-- Color Template -->
             <div>
-                <label for="colorTemplate" class="block text-sm font-medium text-gray-700 mb-1">Color Template:</label>
-                <select id="colorTemplate" name="colorTemplate" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label for="colorTemplate" class="block text-sm font-medium text-gray-700 mb-2">🎨 Color Theme:</label>
+                <select id="colorTemplate" name="colorTemplate" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
                     <option value="purple_blue">Purple to Blue</option>
                     <option value="sunset">Sunset</option>
                     <option value="ocean">Ocean</option>
@@ -76,10 +146,10 @@
             </div>
 
             <!-- Font Selections -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="titleFont" class="block text-sm font-medium text-gray-700 mb-1">Title Font:</label>
-                    <select id="titleFont" name="titleFont" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label for="titleFont" class="block text-sm font-medium text-gray-700 mb-2">🔤 Title Font:</label>
+                    <select id="titleFont" name="titleFont" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
                         <option value="msyh">Microsoft YaHei</option>
                         <option value="wqy">WQY ZenHei</option>
                         <option value="vera">Vera</option>
@@ -88,8 +158,8 @@
                 </div>
 
                 <div>
-                    <label for="bodyFont" class="block text-sm font-medium text-gray-700 mb-1">Body Font:</label>
-                    <select id="bodyFont" name="bodyFont" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label for="bodyFont" class="block text-sm font-medium text-gray-700 mb-2">📖 Body Font:</label>
+                    <select id="bodyFont" name="bodyFont" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
                         <option value="msyh">Microsoft YaHei</option>
                         <option value="wqy">WQY ZenHei</option>
                         <option value="vera">Vera</option>
@@ -100,18 +170,18 @@
 
             <!-- Voice Provider Selection -->
             <div>
-                <label for="voiceProvider" class="block text-sm font-medium text-gray-700 mb-1">Voice Provider:</label>
-                <select id="voiceProvider" name="voiceProvider" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label for="voiceProvider" class="block text-sm font-medium text-gray-700 mb-2">🎤 Voice Provider:</label>
+                <select id="voiceProvider" name="voiceProvider" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
                     <option value="openai">OpenAI TTS</option>
                     <option value="elevenlabs">ElevenLabs</option>
                     <option value="google">Google Cloud TTS</option>
                     <option value="azure">Azure Speech Services</option>
                 </select>
-                <div id="providerStatus" class="mt-2 text-sm text-gray-600">
+                <div id="providerStatus" class="mt-3 text-sm">
                     <!-- Provider status will be shown here -->
                 </div>
-                <div class="mt-2 text-xs text-gray-500">
-                    <strong>API Key Requirements:</strong><br>
+                <div class="mt-3 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                    <strong>💡 API Key Requirements:</strong><br>
                     • OpenAI: OPENAI_API_KEY<br>
                     • ElevenLabs: ELEVENLABS_API_KEY<br>
                     • Google: GOOGLE_CLOUD_API_KEY<br>
@@ -121,26 +191,26 @@
 
             <!-- Voice Selection -->
             <div>
-                <label for="voice" class="block text-sm font-medium text-gray-700 mb-1">Voice:</label>
-                <select id="voice" name="voice" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <label for="voice" class="block text-sm font-medium text-gray-700 mb-2">🗣️ Voice:</label>
+                <select id="voice" name="voice" required="" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
                     <!-- Options will be populated dynamically based on provider -->
                 </select>
             </div>
 
             <!-- Voice Settings -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="voiceSpeed" class="block text-sm font-medium text-gray-700 mb-1">Speed:</label>
-                    <select id="voiceSpeed" name="voiceSpeed" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="0.75">0.75x</option>
+                    <label for="voiceSpeed" class="block text-sm font-medium text-gray-700 mb-2">⚡ Speed:</label>
+                    <select id="voiceSpeed" name="voiceSpeed" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
+                        <option value="0.75">0.75x (Slow)</option>
                         <option value="1.0" selected>1.0x (Normal)</option>
-                        <option value="1.25">1.25x</option>
-                        <option value="1.5">1.5x</option>
+                        <option value="1.25">1.25x (Fast)</option>
+                        <option value="1.5">1.5x (Very Fast)</option>
                     </select>
                 </div>
                 <div>
-                    <label for="voiceStability" class="block text-sm font-medium text-gray-700 mb-1">Stability (ElevenLabs):</label>
-                    <select id="voiceStability" name="voiceStability" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <label for="voiceStability" class="block text-sm font-medium text-gray-700 mb-2">🎯 Stability (ElevenLabs):</label>
+                    <select id="voiceStability" name="voiceStability" class="w-full px-4 py-3 border border-gray-300 rounded-lg theme-input focus:outline-none transition-all duration-200">
                         <option value="0.3">Low (0.3)</option>
                         <option value="0.5" selected>Medium (0.5)</option>
                         <option value="0.7">High (0.7)</option>
@@ -150,34 +220,37 @@
             </div>
 
             <!-- Submit Button -->
-            <button type="submit" id="generateBtn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
-                Generate Video
+            <button type="submit" id="generateBtn" class="w-full theme-button py-4 px-8 rounded-xl font-semibold text-lg shadow-lg focus:outline-none focus:ring-4 focus:ring-opacity-50 transition-all duration-300">
+                🎬 Generate Video
             </button>
         </form>
 
         <!-- Progress Section -->
         <div class="mt-8">
-            <h2 class="text-xl font-semibold mb-4 text-center text-gray-700">Generation Progress:</h2>
+            <h2 class="text-2xl font-semibold mb-6 text-center theme-title">✨ Generation Progress</h2>
             
             <div class="progress-bar" id="progressBar">
                 <div class="progress" id="progress"></div>
             </div>
 
-            <div id="statusImage" class="status-message">Generating Image...</div>
-            <div id="statusAudio" class="status-message">Generating Audio...</div>
-            <div id="statusVideo" class="status-message">Creating Video...</div>
+            <div id="statusImage" class="status-message">🎨 Generating Image...</div>
+            <div id="statusAudio" class="status-message">🎤 Generating Audio...</div>
+            <div id="statusVideo" class="status-message">🎬 Creating Video...</div>
 
             <!-- Output Section -->
             <div class="mt-8 space-y-6">
                 <div id="imageOutput" class="hidden">
-                    <h3 class="text-lg font-medium mb-2 text-gray-700">Generated Image:</h3>
-                    <img id="generatedImage" class="w-full rounded-lg shadow-md" src="" alt="Generated Image">
+                    <div class="theme-card p-6 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-medium mb-4 text-gray-700">🖼️ Generated Image:</h3>
+                        <img id="generatedImage" class="w-full rounded-lg shadow-md" src="" alt="Generated Image">
+                    </div>
                 </div>
 
                 <div id="videoOutput" class="hidden">
-                    <h3 class="text-lg font-medium mb-2 text-gray-700">Generated Video:</h3>
-                    <video id="generatedVideo" class="w-full rounded-lg shadow-md" controls="">
-                        Your browser does not support the video tag.
+                    <div class="theme-card p-6 rounded-xl shadow-lg">
+                        <h3 class="text-lg font-medium mb-4 text-gray-700">🎥 Generated Video:</h3>
+                        <video id="generatedVideo" class="w-full rounded-lg shadow-md" controls="">
+                            Your browser does not support the video tag.
                     </video>
                 </div>
             </div>
@@ -185,6 +258,28 @@
     </div>
 
     <script>
+        // Theme switching functionality
+        function switchTheme(themeName) {
+            const body = document.body;
+            // Remove all existing theme classes
+            body.classList.remove('theme-purple_blue', 'theme-sunset', 'theme-ocean', 'theme-forest', 'theme-dark');
+            // Add the new theme class
+            body.classList.add(`theme-${themeName}`);
+        }
+
+        // Initialize theme switching on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const colorTemplateSelect = document.getElementById('colorTemplate');
+            
+            // Set initial theme
+            switchTheme(colorTemplateSelect.value);
+            
+            // Add event listener for theme changes
+            colorTemplateSelect.addEventListener('change', function() {
+                switchTheme(this.value);
+            });
+        });
+
         // Voice provider configurations
         const voiceProviders = {
             openai: {
