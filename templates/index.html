@@ -1,0 +1,399 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Video Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #4f46e5;
+            transition: width 0.3s ease;
+        }
+
+        .status-message {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+            color: #4f46e5;
+        }
+
+        .provider-unavailable {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .provider-status {
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
+        .provider-available {
+            color: #10b981;
+        }
+
+        .provider-unavailable-status {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-indigo-600">Text to Video Generator</h1>
+        
+        <form id="generatorForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
+            <!-- Title Input -->
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title:</label>
+                <input type="text" id="title" name="title" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <!-- Text Content -->
+            <div>
+                <label for="text" class="block text-sm font-medium text-gray-700 mb-1">Text Content:</label>
+                <textarea id="text" name="text" rows="6" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <!-- Color Template -->
+            <div>
+                <label for="colorTemplate" class="block text-sm font-medium text-gray-700 mb-1">Color Template:</label>
+                <select id="colorTemplate" name="colorTemplate" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="purple_blue">Purple to Blue</option>
+                    <option value="sunset">Sunset</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="forest">Forest</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
+
+            <!-- Font Selections -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="titleFont" class="block text-sm font-medium text-gray-700 mb-1">Title Font:</label>
+                    <select id="titleFont" name="titleFont" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="msyh">Microsoft YaHei</option>
+                        <option value="wqy">WQY ZenHei</option>
+                        <option value="vera">Vera</option>
+                        <option value="roboto">Roboto</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="bodyFont" class="block text-sm font-medium text-gray-700 mb-1">Body Font:</label>
+                    <select id="bodyFont" name="bodyFont" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="msyh">Microsoft YaHei</option>
+                        <option value="wqy">WQY ZenHei</option>
+                        <option value="vera">Vera</option>
+                        <option value="roboto">Roboto</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Voice Provider Selection -->
+            <div>
+                <label for="voiceProvider" class="block text-sm font-medium text-gray-700 mb-1">Voice Provider:</label>
+                <select id="voiceProvider" name="voiceProvider" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="openai">OpenAI TTS</option>
+                    <option value="elevenlabs">ElevenLabs</option>
+                    <option value="google">Google Cloud TTS</option>
+                    <option value="azure">Azure Speech Services</option>
+                </select>
+                <div id="providerStatus" class="mt-2 text-sm text-gray-600">
+                    <!-- Provider status will be shown here -->
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                    <strong>API Key Requirements:</strong><br>
+                    • OpenAI: OPENAI_API_KEY<br>
+                    • ElevenLabs: ELEVENLABS_API_KEY<br>
+                    • Google: GOOGLE_CLOUD_API_KEY<br>
+                    • Azure: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION
+                </div>
+            </div>
+
+            <!-- Voice Selection -->
+            <div>
+                <label for="voice" class="block text-sm font-medium text-gray-700 mb-1">Voice:</label>
+                <select id="voice" name="voice" required="" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <!-- Options will be populated dynamically based on provider -->
+                </select>
+            </div>
+
+            <!-- Voice Settings -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="voiceSpeed" class="block text-sm font-medium text-gray-700 mb-1">Speed:</label>
+                    <select id="voiceSpeed" name="voiceSpeed" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="0.75">0.75x</option>
+                        <option value="1.0" selected>1.0x (Normal)</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="voiceStability" class="block text-sm font-medium text-gray-700 mb-1">Stability (ElevenLabs):</label>
+                    <select id="voiceStability" name="voiceStability" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="0.3">Low (0.3)</option>
+                        <option value="0.5" selected>Medium (0.5)</option>
+                        <option value="0.7">High (0.7)</option>
+                        <option value="0.9">Very High (0.9)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="generateBtn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+                Generate Video
+            </button>
+        </form>
+
+        <!-- Progress Section -->
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-4 text-center text-gray-700">Generation Progress:</h2>
+            
+            <div class="progress-bar" id="progressBar">
+                <div class="progress" id="progress"></div>
+            </div>
+
+            <div id="statusImage" class="status-message">Generating Image...</div>
+            <div id="statusAudio" class="status-message">Generating Audio...</div>
+            <div id="statusVideo" class="status-message">Creating Video...</div>
+
+            <!-- Output Section -->
+            <div class="mt-8 space-y-6">
+                <div id="imageOutput" class="hidden">
+                    <h3 class="text-lg font-medium mb-2 text-gray-700">Generated Image:</h3>
+                    <img id="generatedImage" class="w-full rounded-lg shadow-md" src="" alt="Generated Image">
+                </div>
+
+                <div id="videoOutput" class="hidden">
+                    <h3 class="text-lg font-medium mb-2 text-gray-700">Generated Video:</h3>
+                    <video id="generatedVideo" class="w-full rounded-lg shadow-md" controls="">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Voice provider configurations
+        const voiceProviders = {
+            openai: {
+                name: 'OpenAI TTS',
+                voices: [
+                    { value: 'alloy', name: 'Alloy (Neutral)' },
+                    { value: 'echo', name: 'Echo (Male)' },
+                    { value: 'fable', name: 'Fable (British Male)' },
+                    { value: 'onyx', name: 'Onyx (Deep Male)' },
+                    { value: 'nova', name: 'Nova (Female)' },
+                    { value: 'shimmer', name: 'Shimmer (Soft Female)' }
+                ]
+            },
+            elevenlabs: {
+                name: 'ElevenLabs',
+                voices: [
+                    { value: 'rachel', name: 'Rachel (American Female)' },
+                    { value: 'domi', name: 'Domi (American Female)' },
+                    { value: 'bella', name: 'Bella (American Female)' },
+                    { value: 'antoni', name: 'Antoni (American Male)' },
+                    { value: 'elli', name: 'Elli (American Female)' },
+                    { value: 'josh', name: 'Josh (American Male)' },
+                    { value: 'arnold', name: 'Arnold (American Male)' },
+                    { value: 'adam', name: 'Adam (American Male)' },
+                    { value: 'sam', name: 'Sam (American Male)' }
+                ]
+            },
+            google: {
+                name: 'Google Cloud TTS',
+                voices: [
+                    { value: 'en-US-Standard-A', name: 'US English (Female A)' },
+                    { value: 'en-US-Standard-B', name: 'US English (Male B)' },
+                    { value: 'en-US-Standard-C', name: 'US English (Female C)' },
+                    { value: 'en-US-Standard-D', name: 'US English (Male D)' },
+                    { value: 'en-US-Wavenet-A', name: 'US English Wavenet (Female A)' },
+                    { value: 'en-US-Wavenet-B', name: 'US English Wavenet (Male B)' },
+                    { value: 'en-US-Wavenet-C', name: 'US English Wavenet (Female C)' },
+                    { value: 'en-US-Wavenet-D', name: 'US English Wavenet (Male D)' },
+                    { value: 'zh-CN-Standard-A', name: 'Chinese (Female A)' },
+                    { value: 'zh-CN-Standard-B', name: 'Chinese (Male B)' },
+                    { value: 'zh-CN-Standard-C', name: 'Chinese (Male C)' },
+                    { value: 'zh-CN-Standard-D', name: 'Chinese (Female D)' }
+                ]
+            },
+            azure: {
+                name: 'Azure Speech Services',
+                voices: [
+                    { value: 'en-US-AriaNeural', name: 'Aria (US Female)' },
+                    { value: 'en-US-DavisNeural', name: 'Davis (US Male)' },
+                    { value: 'en-US-GuyNeural', name: 'Guy (US Male)' },
+                    { value: 'en-US-JaneNeural', name: 'Jane (US Female)' },
+                    { value: 'en-US-JasonNeural', name: 'Jason (US Male)' },
+                    { value: 'en-US-JennyNeural', name: 'Jenny (US Female)' },
+                    { value: 'en-US-NancyNeural', name: 'Nancy (US Female)' },
+                    { value: 'en-US-TonyNeural', name: 'Tony (US Male)' },
+                    { value: 'zh-CN-XiaoxiaoNeural', name: 'Xiaoxiao (Chinese Female)' },
+                    { value: 'zh-CN-YunxiNeural', name: 'Yunxi (Chinese Male)' },
+                    { value: 'zh-CN-YunyangNeural', name: 'Yunyang (Chinese Male)' }
+                ]
+            }
+        };
+
+        // Provider availability (will be set from backend)
+        const providerAvailability = {
+            openai: true,
+            elevenlabs: false,
+            google: false,
+            azure: false
+        };
+
+        // Function to update provider status display
+        function updateProviderStatus() {
+            const providerSelect = document.getElementById('voiceProvider');
+            const statusDiv = document.getElementById('providerStatus');
+            const selectedProvider = providerSelect.value;
+
+            const isAvailable = providerAvailability[selectedProvider];
+
+            if (isAvailable) {
+                statusDiv.innerHTML = '<span class="provider-available">✓ Available</span>';
+                statusDiv.className = 'mt-2 text-sm text-green-600';
+            } else {
+                statusDiv.innerHTML = '<span class="provider-unavailable-status">⚠ Not configured (API key required)</span>';
+                statusDiv.className = 'mt-2 text-sm text-red-600';
+            }
+        }
+
+        // Function to update voice options based on selected provider
+        function updateVoiceOptions() {
+            const providerSelect = document.getElementById('voiceProvider');
+            const voiceSelect = document.getElementById('voice');
+            const stabilityDiv = document.getElementById('voiceStability').parentElement;
+
+            const selectedProvider = providerSelect.value;
+            const voices = voiceProviders[selectedProvider].voices;
+
+            // Clear existing options
+            voiceSelect.innerHTML = '';
+
+            // Add new options
+            voices.forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.value;
+                option.textContent = voice.name;
+                voiceSelect.appendChild(option);
+            });
+
+            // Show/hide stability control for ElevenLabs
+            if (selectedProvider === 'elevenlabs') {
+                stabilityDiv.style.display = 'block';
+            } else {
+                stabilityDiv.style.display = 'none';
+            }
+
+            // Update provider status
+            updateProviderStatus();
+        }
+
+        // Initialize voice options on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get provider availability from backend (if available)
+            {% if available_providers %}
+            const backendAvailability = {{ available_providers | tojson }};
+            Object.assign(providerAvailability, backendAvailability);
+            {% endif %}
+
+            updateVoiceOptions();
+
+            // Add event listener for provider changes
+            document.getElementById('voiceProvider').addEventListener('change', updateVoiceOptions);
+        });
+
+        document.getElementById('generatorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Check if selected provider is available
+            const selectedProvider = document.getElementById('voiceProvider').value;
+            if (!providerAvailability[selectedProvider]) {
+                alert(`The selected voice provider (${selectedProvider}) is not configured. Please check the API key requirements and configure the provider, or select a different provider.`);
+                return;
+            }
+            
+            // Reset outputs
+            document.getElementById('imageOutput').classList.add('hidden');
+            document.getElementById('videoOutput').classList.add('hidden');
+            
+            // Show progress elements
+            document.getElementById('progressBar').style.display = 'block';
+            document.getElementById('statusImage').style.display = 'block';
+            
+            // Disable submit button
+            const generateBtn = document.getElementById('generateBtn');
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Processing...';
+
+            try {
+                const formData = new FormData(e.target);
+                
+                // Update progress bar
+                let progress = 0;
+                const progressBar = document.getElementById('progress');
+                const progressInterval = setInterval(() => {
+                    if (progress < 90) {
+                        progress += 5;
+                        progressBar.style.width = `${progress}%`;
+                    }
+                }, 500);
+
+                // Show status messages sequentially
+                setTimeout(() => {
+                    document.getElementById('statusAudio').style.display = 'block';
+                }, 2000);
+                setTimeout(() => {
+                    document.getElementById('statusVideo').style.display = 'block';
+                }, 4000);
+
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+
+                if (data.success) {
+                    // Show video output
+                    const video = document.getElementById('generatedVideo');
+                    video.src = data.video_url;
+                    document.getElementById('videoOutput').classList.remove('hidden');
+                } else {
+                    throw new Error(data.error || 'Failed to generate video');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                // Reset UI
+                setTimeout(() => {
+                    document.getElementById('progressBar').style.display = 'none';
+                    document.getElementById('statusImage').style.display = 'none';
+                    document.getElementById('statusAudio').style.display = 'none';
+                    document.getElementById('statusVideo').style.display = 'none';
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Video';
+                }, 1000);
+            }
+        });
+    </script>
+
+
+</body></html>
