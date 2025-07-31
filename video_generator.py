@@ -1,7 +1,11 @@
 import os
 import gc
 from PIL import Image, ImageDraw, ImageFont
-from moviepy import AudioFileClip, ImageClip, CompositeVideoClip
+try:
+    from moviepy.editor import AudioFileClip, ImageClip, CompositeVideoClip
+except ImportError:
+    # Fallback for different moviepy versions
+    from moviepy import AudioFileClip, ImageClip, CompositeVideoClip
 from voice_providers import get_voice_provider
 from typing import NamedTuple, Tuple
 
