@@ -20,7 +20,11 @@ class VoiceProvider(ABC):
 class OpenAIVoiceProvider(VoiceProvider):
     def __init__(self, config):
         self.api_key = config.get('OPENAI_API_KEY')
-        self.client = OpenAI(api_key=self.api_key) if self.api_key else None
+        try:
+            self.client = OpenAI(api_key=self.api_key) if self.api_key else None
+        except Exception as e:
+            print(f"OpenAI client initialization error: {e}")
+            self.client = None
     
     def generate_speech(self, text: str, voice: str, output_path: str, **kwargs) -> bool:
         if not self.client:
