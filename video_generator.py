@@ -65,37 +65,77 @@ class VideoGenerator:
         return ImageFont.load_default()
     
     def wrap_text(self, text, font, max_width):
-        """Wrap text to fit within max_width"""
+        """Wrap text to fit within max_width with improved handling"""
+        if not text.strip():
+            return ['']
+        
         words = text.split()
         lines = []
         current_line = []
-        current_width = 0
         
         for word in words:
-            word_width = font.getbbox(word + ' ')[2]
-            if current_width + word_width <= max_width:
+            # Test if adding this word would exceed max width
+            test_line = current_line + [word]
+            test_text = ' '.join(test_line)
+            test_width = font.getbbox(test_text)[2]
+            
+            if test_width <= max_width:
                 current_line.append(word)
-                current_width += word_width
             else:
+                # If current line has words, save it and start new line
                 if current_line:
                     lines.append(' '.join(current_line))
-                current_line = [word]
-                current_width = word_width
+                    current_line = [word]
+                else:
+                    # Single word is too long, break it down
+                    if font.getbbox(word)[2] > max_width:
+                        # Break long word into smaller parts
+                        chars = list(word)
+                        current_chars = []
+                        for char in chars:
+                            test_chars = current_chars + [char]
+                            test_text = ''.join(test_chars)
+                            if font.getbbox(test_text)[2] <= max_width:
+                                current_chars.append(char)
+                            else:
+                                if current_chars:
+                                    lines.append(''.join(current_chars))
+                                current_chars = [char]
+                        if current_chars:
+                            current_line = [''.join(current_chars)]
+                    else:
+                        current_line = [word]
         
         if current_line:
             lines.append(' '.join(current_line))
         
-        return lines
+        return lines if lines else ['']
     
+    def get_optimal_font_size(self, text, font_name, max_width, max_height, initial_size=60):
+        """Find optimal font size that fits within constraints"""
+        font_size = initial_size
+        min_size = 20
+        
+        while font_size >= min_size:
+            font = self.get_font(font_name, font_size)
+            lines = self.wrap_text(text, font, max_width)
+            
+            # Calculate total height
+            total_height = 0
+            for line in lines:
+                if line.strip():
+                    line_bbox = font.getbbox(line)
+                    total_height += line_bbox[3] - line_bbox[1] + 5
+            
+            if total_height <= max_height:
+                return font_size
+            
+            font_size -= 5
+        
+        return min_size
+
     def create_text_image(self, text, title, output_path, color_template_key, title_font_key, body_font_key):
         color_template = COLOR_TEMPLATES.get(color_template_key, COLOR_TEMPLATES['purple_blue'])
-        
-        # Font sizes
-        title_size = 120
-        body_size = 60
-        
-        title_font = self.get_font(title_font_key, title_size)
-        body_font = self.get_font(body_font_key, body_size)
         
         # Image dimensions
         card_width = 1080
@@ -103,34 +143,50 @@ class VideoGenerator:
         card_padding = 100
         max_text_width = card_width - (2 * card_padding)
         
-        # Calculate content height
+        # Auto-adjust font sizes to fit content
+        max_title_height = 200
+        max_body_height = 800
+        
+        title_size = self.get_optimal_font_size(title, title_font_key, max_text_width, max_title_height, 120)
+        body_size = self.get_optimal_font_size(text, body_font_key, max_text_width, max_body_height, 60)
+        
+        title_font = self.get_font(title_font_key, title_size)
+        body_font = self.get_font(body_font_key, body_size)
+        
+        # Calculate content layout
         content_height = card_padding
         
-        # Title height
+        # Title height calculation
         title_lines = self.wrap_text(title, title_font, max_text_width)
         title_height = 0
         for line in title_lines:
-            line_bbox = title_font.getbbox(line)
-            title_height += line_bbox[3] - line_bbox[1] + 10
-        content_height += title_height + 80
+            if line.strip():
+                line_bbox = title_font.getbbox(line)
+                title_height += line_bbox[3] - line_bbox[1] + 5
         
-        # Text height calculation
+        content_height += title_height + 40  # Space after title
+        
+        # Body text height calculation
         text_lines = []
-        paragraphs = text.split('\n\n')
-        for paragraph in paragraphs:
-            para_lines = self.wrap_text(paragraph, body_font, max_text_width)
-            text_lines.extend(para_lines)
-            text_lines.append('')  # Add space between paragraphs
+        paragraphs = text.split('\n\n') if '\n\n' in text else [text]
         
+        for i, paragraph in enumerate(paragraphs):
+            if paragraph.strip():
+                para_lines = self.wrap_text(paragraph, body_font, max_text_width)
+                text_lines.extend(para_lines)
+                # Add paragraph spacing (except for last paragraph)
+                if i < len(paragraphs) - 1:
+                    text_lines.append('')
+        
+        body_height = 0
         for line in text_lines:
-            if line:  # Skip empty lines for height calculation
+            if line.strip():
                 line_bbox = body_font.getbbox(line)
-                line_height = line_bbox[3] - line_bbox[1]
-                content_height += line_height + 20
+                body_height += line_bbox[3] - line_bbox[1] + 8
             else:
-                content_height += 30  # Space between paragraphs
+                body_height += 25  # Paragraph spacing
         
-        content_height += card_padding
+        content_height += body_height + card_padding
         
         # Create image
         card_height = max(content_height, 600)  # Minimum height

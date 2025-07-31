@@ -12,7 +12,7 @@ from voice_providers import get_voice_provider
 load_dotenv()
 
 def test_video_generation():
-    print("🧪 Testing Video Generation...")
+    print("🧪 Testing Video Generation with Auto Text Adjustment...")
     
     # Test configuration
     config = {
@@ -23,18 +23,51 @@ def test_video_generation():
     # Create video generator
     video_gen = VideoGenerator(config)
     
-    # Test data
-    test_data = {
-        'text': 'This is a test of the quote speak app. It should generate a video with this text.',
-        'title': 'Test Quote',
-        'color_template': 'purple_blue',
-        'title_font': 'roboto',
-        'body_font': 'roboto',
-        'voice_provider': 'openai',
-        'voice': 'alloy',
-        'voice_speed': 1.0,
-        'voice_stability': 0.5
-    }
+    # Test data with different text lengths
+    test_cases = [
+        {
+            'name': 'Short Text',
+            'data': {
+                'text': 'This is a short test message.',
+                'title': 'Short Test',
+                'color_template': 'purple_blue',
+                'title_font': 'roboto',
+                'body_font': 'roboto',
+                'voice_provider': 'openai',
+                'voice': 'alloy',
+                'voice_speed': 1.0,
+                'voice_stability': 0.5
+            }
+        },
+        {
+            'name': 'Medium Text',
+            'data': {
+                'text': 'This is a medium length test message that should wrap across multiple lines and demonstrate the text wrapping functionality of the quote speak application.',
+                'title': 'Medium Length Test Quote',
+                'color_template': 'sunset',
+                'title_font': 'roboto',
+                'body_font': 'roboto',
+                'voice_provider': 'openai',
+                'voice': 'nova',
+                'voice_speed': 1.0,
+                'voice_stability': 0.5
+            }
+        },
+        {
+            'name': 'Long Text',
+            'data': {
+                'text': 'This is a very long test message that will definitely require multiple lines and should test the automatic font size adjustment feature. The text wrapping algorithm should handle this gracefully and ensure that all text fits within the designated card area. This paragraph contains enough text to thoroughly test the wrapping and sizing functionality.\n\nThis is a second paragraph to test paragraph spacing and multi-paragraph handling. The system should properly separate paragraphs and maintain good visual spacing between them.',
+                'title': 'Very Long Test Quote with Extended Title',
+                'color_template': 'ocean',
+                'title_font': 'roboto',
+                'body_font': 'roboto',
+                'voice_provider': 'openai',
+                'voice': 'shimmer',
+                'voice_speed': 1.0,
+                'voice_stability': 0.5
+            }
+        }
+    ]
     
     # Test voice provider
     print("1. Testing voice provider...")
@@ -45,30 +78,40 @@ def test_video_generation():
         print("❌ OpenAI voice provider not available")
         return False
     
-    # Test image generation
-    print("2. Testing image generation...")
-    try:
-        image_path = os.path.join(config['UPLOAD_FOLDER'], 'test_image.png')
-        video_gen.create_text_image(
-            test_data['text'], 
-            test_data['title'], 
-            image_path,
-            test_data['color_template'], 
-            test_data['title_font'], 
-            test_data['body_font']
-        )
-        if os.path.exists(image_path):
-            print("✅ Image generated successfully")
-            print(f"   Image saved to: {image_path}")
-        else:
-            print("❌ Image generation failed")
-            return False
-    except Exception as e:
-        print(f"❌ Image generation error: {e}")
-        return False
+    # Test multiple text lengths
+    print("2. Testing text auto-adjustment with different lengths...")
     
-    # Test audio generation
-    print("3. Testing audio generation...")
+    for i, test_case in enumerate(test_cases):
+        print(f"\n   Testing {test_case['name']}...")
+        test_data = test_case['data']
+        
+        try:
+            # Generate image
+            image_path = os.path.join(config['UPLOAD_FOLDER'], f'test_image_{i+1}.png')
+            video_gen.create_text_image(
+                test_data['text'], 
+                test_data['title'], 
+                image_path,
+                test_data['color_template'], 
+                test_data['title_font'], 
+                test_data['body_font']
+            )
+            
+            if os.path.exists(image_path):
+                print(f"   ✅ {test_case['name']} image generated")
+                print(f"      Text length: {len(test_data['text'])} chars")
+                print(f"      Title length: {len(test_data['title'])} chars")
+            else:
+                print(f"   ❌ {test_case['name']} image generation failed")
+                return False
+                
+        except Exception as e:
+            print(f"   ❌ {test_case['name']} error: {e}")
+            return False
+    
+    # Test audio generation with medium text
+    print("\n3. Testing audio generation...")
+    test_data = test_cases[1]['data']  # Use medium text
     try:
         audio_path = os.path.join(config['UPLOAD_FOLDER'], 'test_audio.mp3')
         audio_success = provider.generate_speech(
@@ -90,6 +133,7 @@ def test_video_generation():
     # Test video generation
     print("4. Testing video generation...")
     try:
+        image_path = os.path.join(config['UPLOAD_FOLDER'], 'test_image_2.png')  # Use medium text image
         video_path = os.path.join(config['UPLOAD_FOLDER'], 'test_video.mp4')
         video_success = video_gen.create_video(image_path, audio_path, video_path)
         if video_success and os.path.exists(video_path):
