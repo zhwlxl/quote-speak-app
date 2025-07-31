@@ -112,20 +112,28 @@ class VideoGenerator:
         return lines if lines else ['']
     
     def get_optimal_font_size(self, text, font_name, max_width, max_height, initial_size=60):
-        """Find optimal font size that fits within constraints"""
+        """Find optimal font size that fits within constraints with bottom buffer"""
         font_size = initial_size
         min_size = 20
+        bottom_buffer = 30  # Extra space at bottom to prevent touching border
         
         while font_size >= min_size:
             font = self.get_font(font_name, font_size)
             lines = self.wrap_text(text, font, max_width)
             
-            # Calculate total height
+            # Calculate total height with proper line spacing
             total_height = 0
-            for line in lines:
+            for i, line in enumerate(lines):
                 if line.strip():
                     line_bbox = font.getbbox(line)
-                    total_height += line_bbox[3] - line_bbox[1] + 5
+                    line_height = line_bbox[3] - line_bbox[1]
+                    total_height += line_height
+                    # Add line spacing (except for last line)
+                    if i < len(lines) - 1:
+                        total_height += 8
+            
+            # Add bottom buffer to ensure space from border
+            total_height += bottom_buffer
             
             if total_height <= max_height:
                 return font_size
@@ -143,12 +151,18 @@ class VideoGenerator:
         card_padding = 100
         max_text_width = card_width - (2 * card_padding)
         
-        # Auto-adjust font sizes to fit content
-        max_title_height = 200
-        max_body_height = 800
+        # Calculate available space for content with proper margins
+        available_height = 1200  # Base card height
+        title_space = 200
+        title_body_gap = 60
+        bottom_margin = 50  # Ensure space at bottom
         
-        title_size = self.get_optimal_font_size(title, title_font_key, max_text_width, max_title_height, 120)
-        body_size = self.get_optimal_font_size(text, body_font_key, max_text_width, max_body_height, 60)
+        # Calculate available space for body text
+        body_space = available_height - title_space - title_body_gap - bottom_margin - (2 * card_padding)
+        
+        # Auto-adjust font sizes to fit content
+        title_size = self.get_optimal_font_size(title, title_font_key, max_text_width, title_space, 120)
+        body_size = self.get_optimal_font_size(text, body_font_key, max_text_width, body_space, 60)
         
         title_font = self.get_font(title_font_key, title_size)
         body_font = self.get_font(body_font_key, body_size)
@@ -186,10 +200,10 @@ class VideoGenerator:
             else:
                 body_height += 25  # Paragraph spacing
         
-        content_height += body_height + card_padding
+        content_height += body_height + card_padding + 30  # Extra bottom buffer
         
-        # Create image
-        card_height = max(content_height, 600)  # Minimum height
+        # Create image with proper minimum height
+        card_height = max(content_height, 700)  # Increased minimum height
         image_width = card_width + (2 * card_margin)
         image_height = card_height + (2 * card_margin)
         
@@ -203,26 +217,35 @@ class VideoGenerator:
         draw = ImageDraw.Draw(image)
         text_color = color_template.text_color
         
-        # Draw title
+        # Draw title with consistent spacing
         title_x = card_margin + card_padding
         title_y = card_margin + card_padding
         
-        for line in title_lines:
-            draw.text((title_x, title_y), line, font=title_font, fill=text_color)
-            line_bbox = title_font.getbbox(line)
-            title_y += line_bbox[3] - line_bbox[1] + 10
+        for i, line in enumerate(title_lines):
+            if line.strip():
+                draw.text((title_x, title_y), line, font=title_font, fill=text_color)
+                line_bbox = title_font.getbbox(line)
+                line_height = line_bbox[3] - line_bbox[1]
+                title_y += line_height + (8 if i < len(title_lines) - 1 else 0)
         
-        # Draw body text
+        # Draw body text with proper spacing from title
         text_x = card_margin + card_padding
-        text_y = card_margin + card_padding + title_height + 80
+        text_y = card_margin + card_padding + title_height + 60  # Consistent gap
         
-        for line in text_lines:
-            if line:  # Skip empty lines
+        for i, line in enumerate(text_lines):
+            if line.strip():  # Regular text line
                 draw.text((text_x, text_y), line, font=body_font, fill=text_color)
                 line_bbox = body_font.getbbox(line)
-                text_y += line_bbox[3] - line_bbox[1] + 20
-            else:
-                text_y += 30  # Space between paragraphs
+                line_height = line_bbox[3] - line_bbox[1]
+                text_y += line_height + 8  # Consistent line spacing
+            else:  # Empty line (paragraph break)
+                text_y += 25  # Paragraph spacing
+        
+        # Verify we have bottom margin (for debugging)
+        final_text_y = text_y
+        bottom_space = card_height - (final_text_y - card_margin)
+        if bottom_space < 30:
+            print(f"Warning: Only {bottom_space}px bottom space remaining")
         
         image.save(output_path, 'PNG', quality=95, optimize=True)
         return output_path
