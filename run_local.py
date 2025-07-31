@@ -37,11 +37,11 @@ def main():
     app = create_app('development')
     
     print("🚀 Starting Quote Speak App...")
-    print("📱 Open your browser to: http://localhost:5000")
+    print("📱 Open your browser to: http://localhost:5555")
     print("🛑 Press Ctrl+C to stop")
     
     # Run app
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5555, debug=True)
 
 if __name__ == '__main__':
     main()

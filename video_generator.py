@@ -183,9 +183,7 @@ class VideoGenerator:
                 codec="libx264", 
                 audio_codec="aac",
                 bitrate="800k",  # Optimized bitrate
-                audio_bitrate="128k",
-                verbose=False,
-                logger=None
+                audio_bitrate="128k"
             )
             
             # Cleanup
