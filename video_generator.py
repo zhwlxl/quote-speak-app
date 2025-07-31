@@ -7,6 +7,7 @@ except ImportError:
     # Fallback for different moviepy versions
     from moviepy import AudioFileClip, ImageClip, CompositeVideoClip
 from voice_providers import get_voice_provider
+from memory_monitor import memory_monitor, check_available_memory, get_memory_safe_settings
 from typing import NamedTuple, Tuple
 
 class ColorTemplate(NamedTuple):
@@ -247,39 +248,206 @@ class VideoGenerator:
         if bottom_space < 30:
             print(f"Warning: Only {bottom_space}px bottom space remaining")
         
-        image.save(output_path, 'PNG', quality=95, optimize=True)
+        # Save with memory optimization
+        image.save(output_path, 'PNG', quality=85, optimize=True)
+        
+        # Clear image from memory immediately
+        del image
+        gc.collect()
+        
         return output_path
     
+    @memory_monitor.memory_limit_decorator
     def create_video(self, image_path, audio_path, output_path):
+        """Create video with optimized memory management"""
+        
+        # Check available memory before starting
+        if not check_available_memory(300):  # Need at least 300MB
+            print("Warning: Low memory detected, using optimized settings")
+        
+        # Get memory-safe settings
+        memory_usage = memory_monitor.get_memory_usage()
+        settings = get_memory_safe_settings(memory_usage['available_mb'])
+        audio = None
+        image = None
+        final_video = None
+        
         try:
+            # Load audio first to get duration
             audio = AudioFileClip(audio_path)
-            image = ImageClip(image_path).with_duration(audio.duration)
+            audio_duration = audio.duration
             
-            final_video = CompositeVideoClip([image]).with_audio(audio)
+            # Limit audio duration to prevent memory issues
+            max_duration = 300  # 5 minutes max
+            if audio_duration > max_duration:
+                audio = audio.subclipped(0, max_duration)
+                audio_duration = max_duration
+            
+            # Create image clip with duration and memory-safe resolution
+            image = ImageClip(image_path, duration=audio_duration)
+            
+            # Apply memory-safe resolution
+            target_height = settings['resolution'][1]
+            if target_height < 1080:  # Only resize if we need to reduce resolution
+                image = image.resize(height=target_height)
+            
+            # Reduce image quality to save memory
+            image = image.with_fps(settings['fps'])
+            
+            # Create video with memory-optimized settings
+            final_video = CompositeVideoClip([image])
+            final_video = final_video.with_audio(audio)
+            
+            # Write video with memory-efficient settings
             final_video.write_videofile(
-                output_path, 
-                fps=24, 
-                codec="libx264", 
+                output_path,
+                fps=settings['fps'],
+                codec="libx264",
                 audio_codec="aac",
-                bitrate="800k",  # Optimized bitrate
-                audio_bitrate="128k"
+                bitrate=settings['video_bitrate'],
+                audio_bitrate=settings['audio_bitrate'],
+                temp_audiofile="temp_audio.m4a",
+                remove_temp=True,
+                threads=settings['threads'],
+                preset=settings['preset'],
+                ffmpeg_params=["-movflags", "+faststart"]
             )
             
-            # Cleanup
-            audio.close()
-            image.close()
-            final_video.close()
-            
             return True
+            
+        except MemoryError as e:
+            print(f"Memory error during video creation: {e}")
+            # Try with ultra-low memory settings
+            return self._create_video_low_memory(image_path, audio_path, output_path)
         except Exception as e:
             print(f"Video creation error: {e}")
-            return False
+            # Try with fallback method
+            return self._create_video_fallback(image_path, audio_path, output_path)
         finally:
+            # Explicit cleanup in reverse order
+            if final_video:
+                try:
+                    final_video.close()
+                    del final_video
+                except:
+                    pass
+            
+            if image:
+                try:
+                    image.close()
+                    del image
+                except:
+                    pass
+            
+            if audio:
+                try:
+                    audio.close()
+                    del audio
+                except:
+                    pass
+            
             # Force garbage collection
             gc.collect()
+            
+            # Clean up any temporary files
+            temp_files = ["temp_audio.m4a", "temp_audio.wav"]
+            for temp_file in temp_files:
+                try:
+                    if os.path.exists(temp_file):
+                        os.remove(temp_file)
+                except:
+                    pass
     
+    def _create_video_low_memory(self, image_path, audio_path, output_path):
+        """Ultra-low memory fallback method"""
+        print("Attempting low-memory video creation...")
+        
+        try:
+            # Use ffmpeg directly for minimal memory usage
+            import subprocess
+            
+            cmd = [
+                'ffmpeg', '-y',
+                '-loop', '1', '-i', image_path,
+                '-i', audio_path,
+                '-c:v', 'libx264', '-preset', 'ultrafast',
+                '-crf', '28',  # Higher compression
+                '-c:a', 'aac', '-b:a', '64k',
+                '-shortest', '-pix_fmt', 'yuv420p',
+                '-vf', 'scale=854:480',  # Force 480p
+                output_path
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0 and os.path.exists(output_path):
+                print("Low-memory video creation successful")
+                return True
+            else:
+                print(f"FFmpeg error: {result.stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"Low-memory fallback failed: {e}")
+            return False
+    
+    def _create_video_fallback(self, image_path, audio_path, output_path):
+        """Simple fallback method using basic MoviePy"""
+        print("Attempting fallback video creation...")
+        
+        audio = None
+        image = None
+        video = None
+        
+        try:
+            # Load with minimal settings
+            audio = AudioFileClip(audio_path)
+            
+            # Limit duration
+            if audio.duration > 60:  # Max 1 minute for fallback
+                audio = audio.subclipped(0, 60)
+            
+            # Create simple image clip
+            image = ImageClip(image_path, duration=audio.duration)
+            image = image.resize(height=480)  # Force low resolution
+            
+            # Create video
+            video = image.with_audio(audio)
+            
+            # Write with minimal settings
+            video.write_videofile(
+                output_path,
+                fps=20,
+                codec="libx264",
+                audio_codec="aac",
+                bitrate="300k",
+                audio_bitrate="64k",
+                preset="ultrafast",
+                threads=1
+            )
+            
+            return True
+            
+        except Exception as e:
+            print(f"Fallback method failed: {e}")
+            return False
+        finally:
+            # Cleanup
+            for obj in [video, image, audio]:
+                if obj:
+                    try:
+                        obj.close()
+                        del obj
+                    except:
+                        pass
+            gc.collect()
+    
+    @memory_monitor.memory_limit_decorator
     def generate_video(self, data, base_filename):
         try:
+            # Check memory before starting
+            if not check_available_memory(400):
+                return {'success': False, 'error': 'Insufficient memory for video generation. Please try again later.'}
             # File paths
             image_path = os.path.join(self.config['UPLOAD_FOLDER'], f"{base_filename}.png")
             audio_path = os.path.join(self.config['UPLOAD_FOLDER'], f"{base_filename}.mp3")
